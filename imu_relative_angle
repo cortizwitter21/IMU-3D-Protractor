@@ -1,0 +1,109 @@
+import time
+import board
+import busio
+import digitalio
+
+from adafruit_bno08x import (
+    BNO_REPORT_ACCELEROMETER,
+    BNO_REPORT_GYROSCOPE,
+    BNO_REPORT_MAGNETOMETER,
+    BNO_REPORT_ROTATION_VECTOR,
+)
+from adafruit_bno08x.i2c import BNO08X_I2C
+from adafruit_character_lcd.character_lcd import Character_LCD_Mono
+
+import math
+
+i2c1 = busio.I2C(board.GP5, board.GP4, frequency=400000)
+bno1 = BNO08X_I2C(i2c1)
+
+i2c2 = busio.I2C(board.GP7, board.GP6, frequency=400000)
+bno2 = BNO08X_I2C(i2c2)
+
+for bno in (bno1, bno2):
+    bno.enable_feature(BNO_REPORT_ACCELEROMETER)
+    bno.enable_feature(BNO_REPORT_GYROSCOPE)
+    bno.enable_feature(BNO_REPORT_MAGNETOMETER)
+    bno.enable_feature(BNO_REPORT_ROTATION_VECTOR)
+
+# LCD setup
+lcd_columns = 16
+lcd_rows = 2
+
+# Define GPIO pins for LCD
+lcd_rs = digitalio.DigitalInOut(board.GP0)
+lcd_en = digitalio.DigitalInOut(board.GP1)
+lcd_d4 = digitalio.DigitalInOut(board.GP2)
+lcd_d5 = digitalio.DigitalInOut(board.GP3)
+lcd_d6 = digitalio.DigitalInOut(board.GP8)
+lcd_d7 = digitalio.DigitalInOut(board.GP9)
+
+# Initialize the LCD
+lcd = Character_LCD_Mono(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, lcd_columns, lcd_rows)
+
+def quaternion_inverse(q):
+    """Compute the inverse of a quaternion."""
+    w, x, y, z = q
+    norm_squared = w*w + x*x + y*y + z*z
+    if norm_squared > 0:
+        return (w / norm_squared, -x / norm_squared, -y / norm_squared, -z / norm_squared)
+    else:
+        return (0, 0, 0, 0)  # Return a zero quaternion if norm is zero (error case)
+    
+def quaternion_multiply(q1, q2):
+    """Multiply two quaternions q1 and q2."""
+    w1, x1, y1, z1 = q1
+    w2, x2, y2, z2 = q2
+    return (
+        w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+        w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+        w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+        w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2
+    )
+
+def quaternion_to_euler(q):
+    """Convert quaternion (w, x, y, z) to Euler angles (roll, pitch, yaw)."""
+    w, x, y, z = q
+    
+    # Roll (x-axis rotation)
+    sinr_cosp = 2 * (w * x + y * z)
+    cosr_cosp = 1 - 2 * (x * x + y * y)
+    roll = math.atan2(sinr_cosp, cosr_cosp)
+    
+    # Pitch (y-axis rotation)
+    sinp = 2 * (w * y - z * x)
+    if abs(sinp) >= 1:
+        pitch = math.copysign(math.pi / 2, sinp)  # use 90 degrees if out of range
+    else:
+        pitch = math.asin(sinp)
+    
+    # Yaw (z-axis rotation)
+    siny_cosp = 2 * (w * z + x * y)
+    cosy_cosp = 1 - 2 * (y * y + z * z)
+    yaw = math.atan2(siny_cosp, cosy_cosp)
+    
+    return roll, pitch, yaw
+
+while True:
+    time.sleep(0.5)
+    
+    # Get quaternion data from both IMUs
+    q1 = bno1.quaternion
+    q2 = bno2.quaternion
+
+    q1_inv = quaternion_inverse(q1)
+
+    q_rel = quaternion_multiply(q1_inv, q2)
+
+    # Convert the relative quaternion to Euler angles
+    roll, pitch, yaw = quaternion_to_euler(q_rel)
+
+    # Convert radians to degrees
+    roll_deg = math.degrees(roll)
+    pitch_deg = math.degrees(pitch)
+    yaw_deg = math.degrees(yaw)
+
+    print("Relative Quaternion:", q_rel)
+    print("Roll: {:.2f} degrees".format(roll_deg))
+    print("Pitch: {:.2f} degrees".format(pitch_deg))
+    print("Yaw: {:.2f} degrees".format(yaw_deg))
