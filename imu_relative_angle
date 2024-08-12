@@ -10,10 +10,11 @@ from adafruit_bno08x import (
     BNO_REPORT_ROTATION_VECTOR,
 )
 from adafruit_bno08x.i2c import BNO08X_I2C
-from adafruit_character_lcd.character_lcd import Character_LCD_Mono
 
 import math
 
+
+#SCL, SDA
 i2c1 = busio.I2C(board.GP5, board.GP4, frequency=400000)
 bno1 = BNO08X_I2C(i2c1)
 
@@ -21,30 +22,12 @@ i2c2 = busio.I2C(board.GP7, board.GP6, frequency=400000)
 bno2 = BNO08X_I2C(i2c2)
 
 for bno in (bno1, bno2):
+
     bno.enable_feature(BNO_REPORT_ACCELEROMETER)
     bno.enable_feature(BNO_REPORT_GYROSCOPE)
     bno.enable_feature(BNO_REPORT_MAGNETOMETER)
     bno.enable_feature(BNO_REPORT_ROTATION_VECTOR)
 
-# LCD setup
-lcd_columns = 16
-lcd_rows = 2
-
-# Define GPIO pins for LCD
-lcd_rs = digitalio.DigitalInOut(board.GP0)
-lcd_en = digitalio.DigitalInOut(board.GP1)
-lcd_d4 = digitalio.DigitalInOut(board.GP2)
-lcd_d5 = digitalio.DigitalInOut(board.GP3)
-lcd_d6 = digitalio.DigitalInOut(board.GP8)
-lcd_d7 = digitalio.DigitalInOut(board.GP9)
-
-# Initialize the Reset Button (for microcontroller)
-reset_button = digitalio.DigitalInOut(board.GP15)
-reset_button.direction = digitalio.Direction.INPUT
-reset_button.pull = digitalio.Pull.UP  # Internal pull-up resistor
-
-# Initialize the LCD
-lcd = Character_LCD_Mono(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, lcd_columns, lcd_rows)
 
 def quaternion_inverse(q):
     """Compute the inverse of a quaternion."""
@@ -96,10 +79,9 @@ def calibration(bno1, bno2):
     for bno in (bno1, bno2):
         bno.begin_calibration()
         # TODO: UPDATE UART/SPI
-        bno.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
-        bno.enable_feature(adafruit_bno08x.BNO_REPORT_GAME_ROTATION_VECTOR)
         start_time = time.monotonic()
         calibration_good_at = None
+        
         for i in range(1,10):
             time.sleep(0.1)
 
@@ -110,20 +92,19 @@ def calibration(bno1, bno2):
 
             print("Game Rotation Vector Quaternion:")
             (
-                game_quat_i,
-                game_quat_j,
-                game_quat_k,
-                game_quat_real,
-            ) = bno.game_quaternion  # pylint:disable=no-member
+                quat_i,
+                quat_j,
+                quat_k,
+                quat_real,
+            ) = bno.quaternion  # pylint:disable=no-member
             print(
                 "I: %0.6f  J: %0.6f K: %0.6f  Real: %0.6f"
-                % (game_quat_i, game_quat_j, game_quat_k, game_quat_real)
+                % (quat_i, quat_j, quat_k, quat_real)
             )
             calibration_status = bno.calibration_status
             print(
-                "Magnetometer Calibration quality:",
-                adafruit_bno08x.REPORT_ACCURACY_STATUS[calibration_status],
-                " (%d)" % calibration_status,
+                "Calibration quality:",
+                calibration_status,
             )
             if not calibration_good_at and calibration_status >= 2:
                 calibration_good_at = time.monotonic()
@@ -162,6 +143,7 @@ def calibration(bno1, bno2):
     pitch_offset_final = find_true_ave(pitch_deg_offset)
     yaw_offset_final = find_true_ave(yaw_deg_offset)
 
+    print("Done Calibrating")
     return roll_offset_final, pitch_offset_final, yaw_offset_final
 
 def find_true_ave(list_of_vals):
@@ -183,9 +165,9 @@ def find_true_ave(list_of_vals):
     
 def main():
     while True:
-        roll_offset, pitch_offset, yaw_offset = calibration(bno1, bno2)
+
         time.sleep(0.5)
-        
+
         # Get quaternion data from both IMUs
         q1 = bno1.quaternion
         q2 = bno2.quaternion
@@ -207,10 +189,9 @@ def main():
         print("Pitch: {:.2f} degrees".format(pitch_deg-pitch_offset))
         print("Yaw: {:.2f} degrees".format(yaw_deg-yaw_offset))
 
-        if reset_button.value == False:  # Button pressed (logic low)
-                print("Reset button pressed, restarting main loop...")
-                time.sleep(0.5)  # Debounce delay
-                break  # Exit the loop to restart the main function
         
 while True:
+    roll_offset, pitch_offset, yaw_offset = calibration(bno1, bno2)
+    time.sleep(1)
+
     main()
