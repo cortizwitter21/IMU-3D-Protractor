@@ -38,6 +38,11 @@ lcd_d5 = digitalio.DigitalInOut(board.GP3)
 lcd_d6 = digitalio.DigitalInOut(board.GP8)
 lcd_d7 = digitalio.DigitalInOut(board.GP9)
 
+# Initialize the Reset Button (for microcontroller)
+reset_button = digitalio.DigitalInOut(board.GP15)
+reset_button.direction = digitalio.Direction.INPUT
+reset_button.pull = digitalio.Pull.UP  # Internal pull-up resistor
+
 # Initialize the LCD
 lcd = Character_LCD_Mono(lcd_rs, lcd_en, lcd_d4, lcd_d5, lcd_d6, lcd_d7, lcd_columns, lcd_rows)
 
@@ -84,26 +89,128 @@ def quaternion_to_euler(q):
     
     return roll, pitch, yaw
 
-while True:
-    time.sleep(0.5)
+# calibration script: given 2 IMUs, runs the necessary calibration and returns the offsets for yaw, pitch, and roll
+def calibration(bno1, bno2):
+    print("Calibrating...")
+    # calibration from library
+    for bno in (bno1, bno2):
+        bno.begin_calibration()
+        # TODO: UPDATE UART/SPI
+        bno.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
+        bno.enable_feature(adafruit_bno08x.BNO_REPORT_GAME_ROTATION_VECTOR)
+        start_time = time.monotonic()
+        calibration_good_at = None
+        for i in range(1,10):
+            time.sleep(0.1)
+
+            print("Magnetometer:")
+            mag_x, mag_y, mag_z = bno.magnetic  # pylint:disable=no-member
+            print("X: %0.6f  Y: %0.6f Z: %0.6f uT" % (mag_x, mag_y, mag_z))
+            print("")
+
+            print("Game Rotation Vector Quaternion:")
+            (
+                game_quat_i,
+                game_quat_j,
+                game_quat_k,
+                game_quat_real,
+            ) = bno.game_quaternion  # pylint:disable=no-member
+            print(
+                "I: %0.6f  J: %0.6f K: %0.6f  Real: %0.6f"
+                % (game_quat_i, game_quat_j, game_quat_k, game_quat_real)
+            )
+            calibration_status = bno.calibration_status
+            print(
+                "Magnetometer Calibration quality:",
+                adafruit_bno08x.REPORT_ACCURACY_STATUS[calibration_status],
+                " (%d)" % calibration_status,
+            )
+            if not calibration_good_at and calibration_status >= 2:
+                calibration_good_at = time.monotonic()
+            if calibration_good_at and (time.monotonic() - calibration_good_at > 5.0):
+                input_str = input("\n\nEnter S to save or anything else to continue: ")
+                if input_str.strip().lower() == "s":
+                    bno.save_calibration_data()
+                    break
+                calibration_good_at = None
+
+    time.sleep(2)
+    # calculating offsets
+    num_cal_observations = 20
+    roll_deg_offset = []
+    pitch_deg_offset = []
+    yaw_deg_offset = []
+    # go through the calculation of the quaternions 20 times, storing the roll, pitch, and yaw each time
+    for iii in range(1,num_cal_observations):
+        q1 = bno1.quaternion
+        q2 = bno2.quaternion
+
+        q1_inv = quaternion_inverse(q1)
+
+        q_rel = quaternion_multiply(q1_inv, q2)
+
+        # Convert the relative quaternion to Euler angles
+        roll, pitch, yaw = quaternion_to_euler(q_rel)
+
+        # Convert radians to degrees
+        roll_deg_offset.append(math.degrees(roll))
+        pitch_deg_offset.append(math.degrees(pitch))
+        yaw_deg_offset.append(math.degrees(yaw))
+
+    # find average offset
+    roll_offset_final = find_true_ave(roll_deg_offset)
+    pitch_offset_final = find_true_ave(pitch_deg_offset)
+    yaw_offset_final = find_true_ave(yaw_deg_offset)
+
+    return roll_offset_final, pitch_offset_final, yaw_offset_final
+
+def find_true_ave(list_of_vals):
+    # find the mean
+    mean = sum(list_of_vals) / len(list_of_vals)
+
+    # find the variance
+    variance = sum((x - mean) ** 2 for x in list_of_vals) / len(list_of_vals)
+
+    # calculate the standard deviation
+    standard_deviation = math.sqrt(variance)
+
+    # get rid of outliers
+    new_list = [val for val in list_of_vals if abs(val-mean) < 2*standard_deviation]
+
+    # return new average
+    return sum(new_list)/len(new_list)
+        
     
-    # Get quaternion data from both IMUs
-    q1 = bno1.quaternion
-    q2 = bno2.quaternion
+def main():
+    while True:
+        roll_offset, pitch_offset, yaw_offset = calibration(bno1, bno2)
+        time.sleep(0.5)
+        
+        # Get quaternion data from both IMUs
+        q1 = bno1.quaternion
+        q2 = bno2.quaternion
 
-    q1_inv = quaternion_inverse(q1)
+        q1_inv = quaternion_inverse(q1)
 
-    q_rel = quaternion_multiply(q1_inv, q2)
+        q_rel = quaternion_multiply(q1_inv, q2)
 
-    # Convert the relative quaternion to Euler angles
-    roll, pitch, yaw = quaternion_to_euler(q_rel)
+        # Convert the relative quaternion to Euler angles
+        roll, pitch, yaw = quaternion_to_euler(q_rel)
 
-    # Convert radians to degrees
-    roll_deg = math.degrees(roll)
-    pitch_deg = math.degrees(pitch)
-    yaw_deg = math.degrees(yaw)
+        # Convert radians to degrees
+        roll_deg = math.degrees(roll)
+        pitch_deg = math.degrees(pitch)
+        yaw_deg = math.degrees(yaw)
 
-    print("Relative Quaternion:", q_rel)
-    print("Roll: {:.2f} degrees".format(roll_deg))
-    print("Pitch: {:.2f} degrees".format(pitch_deg))
-    print("Yaw: {:.2f} degrees".format(yaw_deg))
+        print("Relative Quaternion:", q_rel)
+        print("Roll: {:.2f} degrees".format(roll_deg-roll_offset))
+        print("Pitch: {:.2f} degrees".format(pitch_deg-pitch_offset))
+        print("Yaw: {:.2f} degrees".format(yaw_deg-yaw_offset))
+
+        if reset_button.value == False:  # Button pressed (logic low)
+                print("Reset button pressed, restarting main loop...")
+                time.sleep(0.5)  # Debounce delay
+                break  # Exit the loop to restart the main function
+        
+while True:
+    main()
