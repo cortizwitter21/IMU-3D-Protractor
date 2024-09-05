@@ -3,7 +3,9 @@ This repository contains the code used for the 3D Protractor prototype intended 
 
 Before turning on, the device should be sit on a "calibration rail" that forces the protractor into the known 0 position. The device woud then turn on and calibrate its current angle measurements to be 0 degrees rotation in all planes. From there, the device could be used as normal. To recalibrate, one sould simply turn off the device, put it on the calibration rail, and turn it on again.
 
-
+## Key Findings During Experimentation:
+1. For Arduino, the Adafruit_BNO08x library (the official Adafruit library) does **not** support 2 BNO08x IMUs simultaneously, therefore should not be used for this project.
+2. The bno08x library from the most recent adafruit-circuitpython-bundle does not support the change of address, meaning our resources did not allow us to continue with this version.
 
 
 
