@@ -1,11 +1,17 @@
+// Main Program
+// This program is meant to be directly run every time the 3D Protractor is turned on.
 
+
+#pragma once
 
 #include <Arduino.h>
 #include <Wire.h>
 #include "SparkFun_BNO080_Arduino_Library.h" //Source: http://librarymanager/All#SparkFun_BNO080
 #include <Adafruit_SSD1306.h>
+#include <calibration.h>
 #include <vector>
 #include <string>
+
 
 
 // define screen size
@@ -41,7 +47,7 @@ void displayText(std::string message) {
 
 
   // Display the text
-  display.println(message);
+  display.println(message.c_str());
 
 
   display.display();            // Show the content on the display
@@ -163,7 +169,7 @@ double findTrueAve(std::vector<double> vector_vals) {
 }
 
 // Calculate the offset for the pitch, roll, and yaw
-void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_offset, BNO080 bno08x1, BNO080 bno08x2)
+void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_offset, BNO080 bno08x1, BNO080 bno08x2, int num_calibrations)
 {
 
 
@@ -267,11 +273,11 @@ while(sensor_accuracy < 2 | counter < 10) {
   }
 }
   if (sensor_accuracy < 2) {
-    std::string bad_message = "Sensor " + IMU_num + "offset, but with low calibration accuracy";
+    std::string bad_message = std::string("Sensor ") + std::to_string(IMU_num) + "offset, but with low calibration accuracy";
     displayText(bad_message);
   }
   else {
-    std::string good_message = "Sensor " + IMU_num + "offset successfully!";
+    std::string good_message = std::string("Sensor ") + std::to_string(IMU_num) + "offset successfully!";
     displayText(good_message);
   }
 }
