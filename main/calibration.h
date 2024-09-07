@@ -7,6 +7,7 @@
 #include <Adafruit_SSD1306.h>
 #include <vector>
 #include <string>
+#include "display.h"
 
 double findMean(std::vector<double> vector_vals);
 

@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <Wire.h>
 #include "SparkFun_BNO080_Arduino_Library.h" //Source: http://librarymanager/All#SparkFun_BNO080
@@ -7,7 +6,7 @@
 #include <string>
 #include "display.h"
 
-void displayText(std::string message) {
+void displayText(std::string message, Adafruit_SSD1306 &display) {
   display.clearDisplay();
   display.setTextSize(1);       // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);  // Draw white text
@@ -23,7 +22,7 @@ void displayText(std::string message) {
 }
 
 // Display a given set of roll, pitch, and yaw values on screen
-void displayAngles(double roll, double pitch, double yaw) {
+void displayAngles(double roll, double pitch, double yaw, Adafruit_SSD1306 &display) {
   display.clearDisplay();
   display.setTextSize(1);       // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);  // Draw white text

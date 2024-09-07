@@ -7,8 +7,8 @@
 #include <vector>
 #include <string>
 
-void displayText(std::string message);
+void displayText(std::string message, Adafruit_SSD1306 &display);
 
-void displayAngles(double roll, double pitch, double yaw);
+void displayAngles(double roll, double pitch, double yaw, Adafruit_SSD1306 &display);
 
 #endif

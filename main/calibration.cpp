@@ -1,5 +1,3 @@
-#pragma once
-
 #include <Arduino.h>
 #include <Wire.h>
 #include "SparkFun_BNO080_Arduino_Library.h" //Source: http://librarymanager/All#SparkFun_BNO080
@@ -7,6 +5,16 @@
 #include <vector>
 #include <string>
 #include "calibration.h"
+
+// define struct that will house the yaw, pitch, and. roll of each individual IMU
+struct euler_t {
+  double yaw;
+  double pitch;
+  double roll;
+} ypr_1;
+
+
+struct euler_t ypr_2;
 
 // Find the mean of a vector of values
 double findMean(std::vector<double> vector_vals) {
@@ -69,9 +77,9 @@ void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_off
     // Find pitch, yaw, and roll of bno08x1
     if (bno08x1.dataAvailable() == true)
     {
-      ypr1.roll = (bno08x1.getRoll()) * 180.0 / PI; // Convert roll to degrees
-      ypr1.pitch = (bno08x1.getPitch()) * 180.0 / PI; // Convert pitch to degrees
-      ypr1.yaw = (bno08x1.getYaw()) * 180.0 / PI; // Convert yaw / heading to degrees
+      ypr_1.roll = (bno08x1.getRoll()) * 180.0 / PI; // Convert roll to degrees
+      ypr_1.pitch = (bno08x1.getPitch()) * 180.0 / PI; // Convert pitch to degrees
+      ypr_1.yaw = (bno08x1.getYaw()) * 180.0 / PI; // Convert yaw / heading to degrees
 
 
     }
@@ -79,17 +87,17 @@ void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_off
     // Find pitch, yaw, and roll of bno08x2
     if (bno08x2.dataAvailable() == true)
     {
-      ypr2.roll = (bno08x2.getRoll()) * 180.0 / PI; // Convert roll to degrees
-      ypr2.pitch = (bno08x1.getPitch()) * 180.0 / PI; // Convert pitch to degrees
-      ypr2.yaw = (bno08x2.getYaw()) * 180.0 / PI; // Convert yaw / heading to degrees
+      ypr_2.roll = (bno08x2.getRoll()) * 180.0 / PI; // Convert roll to degrees
+      ypr_2.pitch = (bno08x1.getPitch()) * 180.0 / PI; // Convert pitch to degrees
+      ypr_2.yaw = (bno08x2.getYaw()) * 180.0 / PI; // Convert yaw / heading to degrees
 
 
     }
 
     // Store differences of angles in their respective vectors
-    roll_vals[i] = ypr1.roll - ypr2.roll;
-    pitch_vals[i] = ypr1.pitch - ypr2.pitch;
-    yaw_vals[i] = ypr1.yaw - ypr2.yaw;
+    roll_vals[i] = ypr_1.roll - ypr_2.roll;
+    pitch_vals[i] = ypr_1.pitch - ypr_2.pitch;
+    yaw_vals[i] = ypr_1.yaw - ypr_2.yaw;
 
 
   }
@@ -101,7 +109,7 @@ void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_off
 }
 
 // Calibrate individual sensors
-void calibrateSystem(BNO080 &my_IMU, int IMU_num) {
+void calibrateSystem(BNO080 &my_IMU, int IMU_num, Adafruit_SSD1306 &display) {
   my_IMU.calibrateAll(); //Turn on cal for Accel, Gyro, and Mag
 
 
@@ -158,10 +166,10 @@ void calibrateSystem(BNO080 &my_IMU, int IMU_num) {
   }
   if (sensor_accuracy < 2) {
     std::string bad_message = std::string("Sensor ") + std::to_string(IMU_num) + "offset, but with low calibration accuracy";
-    displayText(bad_message);
+    displayText(bad_message, display);
   }
   else {
     std::string good_message = std::string("Sensor ") + std::to_string(IMU_num) + "offset successfully!";
-    displayText(good_message);
+    displayText(good_message, display);
   }
 }

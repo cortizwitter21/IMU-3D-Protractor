@@ -37,7 +37,7 @@ struct euler_t {
 } ypr1;
 
 
-struct euler_t ypr2;
+struct euler_t ypr2; 
 
 void setup()
 {
@@ -56,7 +56,7 @@ void setup()
     Serial.println(F("SSD1306 allocation failed"));
     while (1);
   }
-  displayText("Initializing 3D Protractor...");
+  displayText("Initializing 3D Protractor...", display);
 
 
 
@@ -125,7 +125,7 @@ void loop()
     Serial.println(roll_diff);
 
 
-    displayAngles(roll_diff, pitch_diff, yaw_diff);
+    displayAngles(roll_diff, pitch_diff, yaw_diff, display);
 
 
     delay(100);  // Delay for readability
