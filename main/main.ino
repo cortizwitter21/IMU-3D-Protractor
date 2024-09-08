@@ -29,6 +29,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire);
 //define difference in roll, pitch, and yaw
 double roll_diff, pitch_diff, yaw_diff;
 
+// define offsets for roll, pitch and yaw
+double roll_offset, pitch_offset, yaw_offset;
+
 // define struct that will house the yaw, pitch, and. roll of each individual IMU
 struct euler_t {
   double yaw;
@@ -67,14 +70,14 @@ void setup()
   //Start 2 sensors
   if (bno08x1.begin(0x4B) == false)
   {
-    Serial.println("First BNO080 not detected with I2C ADR jumper open. Check your jumpers and the hookup guide. Freezing...");
+    Serial.println("First BNO085 not detected with I2C ADR jumper open");
     while(1);
   }
 
 
   if (bno08x2.begin(0x4A) == false)
   {
-    Serial.println("Second BNO080 not detected with I2C ADR jumper closed. Check your jumpers and the hookup guide. Freezing...");
+    Serial.println("Second BNO085 not detected with I2C ADR jumper closed");
     while(1);
   }
 
@@ -87,6 +90,11 @@ void setup()
   delay(1000);
   display.display();
   display.clearDisplay();
+
+  calibrateSystem(bno08x1, 1, display);
+  calibrateSystem(bno08x2, 2, display);
+
+  calibrateAverage(roll_offset, pitch_offset, yaw_offset, bno08x1, bno08x2, num_calibrations);
 }
 
 void loop()
@@ -112,9 +120,9 @@ void loop()
   }
 
 
-  roll_diff = ypr1.roll - ypr2.roll;
-    pitch_diff = ypr1.pitch - ypr2.pitch;
-    yaw_diff = ypr1.yaw - ypr2.yaw;
+  roll_diff = ypr1.roll - ypr2.roll - roll_offset;
+    pitch_diff = ypr1.pitch - ypr2.pitch - pitch_offset;
+    yaw_diff = ypr1.yaw - ypr2.yaw - yaw_offset;
    
     Serial.print("two IMUs");             Serial.print("\t");
     Serial.print("Yaw:");

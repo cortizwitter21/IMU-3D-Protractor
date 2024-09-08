@@ -7,14 +7,14 @@
 #include "calibration.h"
 
 // define struct that will house the yaw, pitch, and. roll of each individual IMU
-struct euler_t {
+struct euler_cal {
   double yaw;
   double pitch;
   double roll;
 } ypr_1;
 
 
-struct euler_t ypr_2;
+struct euler_cal ypr_2;
 
 // Find the mean of a vector of values
 double findMean(std::vector<double> vector_vals) {
