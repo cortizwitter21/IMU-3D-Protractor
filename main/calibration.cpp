@@ -61,7 +61,7 @@ double findTrueAve(std::vector<double> vector_vals) {
 }
 
 // Calculate the offset for the pitch, roll, and yaw
-void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_offset, BNO080 bno08x1, BNO080 bno08x2, int num_calibrations)
+void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_offset, BNO080 bno08x1, BNO080 bno08x2, int num_calibrations, Adafruit_SSD1306 &display)
 {
 
 
@@ -75,8 +75,11 @@ void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_off
 
   for (int i = 0; i < num_calibrations; i++) {
     // Find pitch, yaw, and roll of bno08x1
+    std::string test_string = std::string("Running Test ") + std::to_string(i);
+    displayText(test_string, display);
     if (bno08x1.dataAvailable() == true)
     {
+      displayText("bno08x1 data available", display);
       ypr_1.roll = (bno08x1.getRoll()) * 180.0 / PI; // Convert roll to degrees
       ypr_1.pitch = (bno08x1.getPitch()) * 180.0 / PI; // Convert pitch to degrees
       ypr_1.yaw = (bno08x1.getYaw()) * 180.0 / PI; // Convert yaw / heading to degrees
@@ -87,18 +90,19 @@ void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_off
     // Find pitch, yaw, and roll of bno08x2
     if (bno08x2.dataAvailable() == true)
     {
+      displayText("bno08x2 data available", display);
       ypr_2.roll = (bno08x2.getRoll()) * 180.0 / PI; // Convert roll to degrees
-      ypr_2.pitch = (bno08x1.getPitch()) * 180.0 / PI; // Convert pitch to degrees
+      ypr_2.pitch = (bno08x2.getPitch()) * 180.0 / PI; // Convert pitch to degrees
       ypr_2.yaw = (bno08x2.getYaw()) * 180.0 / PI; // Convert yaw / heading to degrees
 
 
     }
-
+    displayText("angles gotten from both devices", display);
     // Store differences of angles in their respective vectors
-    roll_vals[i] = ypr_1.roll - ypr_2.roll;
-    pitch_vals[i] = ypr_1.pitch - ypr_2.pitch;
-    yaw_vals[i] = ypr_1.yaw - ypr_2.yaw;
-
+    roll_vals.push_back(ypr_1.roll - ypr_2.roll);
+    pitch_vals.push_back(ypr_1.pitch - ypr_2.pitch);
+    yaw_vals.push_back(ypr_1.yaw - ypr_2.yaw);
+    displayText("angle diffs stored", display);
 
   }
 
@@ -106,6 +110,7 @@ void calibrateAverage(double &roll_offset, double &pitch_offset, double &yaw_off
   roll_offset = findTrueAve(roll_vals);
   pitch_offset = findTrueAve(pitch_vals);
   yaw_offset = findTrueAve(yaw_vals);
+  displayText("angle offsets stored", display);
 }
 
 // Calibrate individual sensors
@@ -163,13 +168,17 @@ void calibrateSystem(BNO080 &my_IMU, int IMU_num, Adafruit_SSD1306 &display) {
       Serial.println();
       counter+=1;
     }
+    else {
+      displayText("No IMU data available", display);
+    }
   }
   if (sensor_accuracy < 2) {
-    std::string bad_message = std::string("Sensor ") + std::to_string(IMU_num) + "offset, but with low calibration accuracy";
+    std::string bad_message = std::string("Sensor ") + std::to_string(IMU_num) + " calibrated but with low calibration accuracy";
     displayText(bad_message, display);
   }
   else {
-    std::string good_message = std::string("Sensor ") + std::to_string(IMU_num) + "offset successfully!";
+    std::string good_message = std::string("Sensor ") + std::to_string(IMU_num) + " calibrated successfully!";
     displayText(good_message, display);
   }
+  my_IMU.saveCalibration();
 }

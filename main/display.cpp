@@ -18,7 +18,8 @@ void displayText(std::string message, Adafruit_SSD1306 &display) {
 
 
   display.display();            // Show the content on the display
-  delay(1000);
+  delay(500);
+  display.clearDisplay();
 }
 
 // Display a given set of roll, pitch, and yaw values on screen
@@ -30,11 +31,11 @@ void displayAngles(double roll, double pitch, double yaw, Adafruit_SSD1306 &disp
 
 
   // Display the angles
-  display.print("Roll: ");
+  display.print("X-axis: ");
   display.println(roll, 2);
-  display.print("Pitch: ");
+  display.print("Y-axis: ");
   display.println(pitch, 2);
-  display.print("Yaw: ");
+  display.print("Z-axis: ");
   display.println(yaw, 2);
 
 

@@ -50,7 +50,7 @@ void setup()
 
 
   Wire.begin();
-  Wire.setClock(400000); //Increase I2C data rate to 400kHz
+  Wire.setClock(40000); //Increase I2C data rate to 400kHz
 
 
 
@@ -60,7 +60,7 @@ void setup()
     while (1);
   }
   displayText("Initializing 3D Protractor...", display);
-
+  Serial.println("Found OLED display");
 
 
 
@@ -73,6 +73,7 @@ void setup()
     Serial.println("First BNO085 not detected with I2C ADR jumper open");
     while(1);
   }
+  Serial.println("Found Sensor 1");
 
 
   if (bno08x2.begin(0x4A) == false)
@@ -80,6 +81,7 @@ void setup()
     Serial.println("Second BNO085 not detected with I2C ADR jumper closed");
     while(1);
   }
+  Serial.println("Found Sensor 2");
 
 
   bno08x1.enableRotationVector(50); //Send data update every 50ms
@@ -94,7 +96,7 @@ void setup()
   calibrateSystem(bno08x1, 1, display);
   calibrateSystem(bno08x2, 2, display);
 
-  calibrateAverage(roll_offset, pitch_offset, yaw_offset, bno08x1, bno08x2, num_calibrations);
+  calibrateAverage(roll_offset, pitch_offset, yaw_offset, bno08x1, bno08x2, num_calibrations, display);
 }
 
 void loop()
@@ -113,7 +115,7 @@ void loop()
   if (bno08x2.dataAvailable() == true)
   {
     ypr2.roll = (bno08x2.getRoll()) * 180.0 / PI; // Convert roll to degrees
-    ypr2.pitch = (bno08x1.getPitch()) * 180.0 / PI; // Convert pitch to degrees
+    ypr2.pitch = (bno08x2.getPitch()) * 180.0 / PI; // Convert pitch to degrees
     ypr2.yaw = (bno08x2.getYaw()) * 180.0 / PI; // Convert yaw / heading to degrees
 
 
