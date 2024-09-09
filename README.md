@@ -15,7 +15,7 @@ Before turning on, the device should be placed on a "calibration rail" that forc
 
 - 2 Protoboards (one for each IMU to allow free motion between them)
 
-- 1 Battery Pack
+- 1 Battery Pack For 3.3V
 
 - 1 Switch
 
