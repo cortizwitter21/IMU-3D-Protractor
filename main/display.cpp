@@ -1,3 +1,6 @@
+// display.cpp
+// This file contains the functions necessary for displaying text and angle measurements to the OLE screen
+
 #include <Arduino.h>
 #include <Wire.h>
 #include "SparkFun_BNO080_Arduino_Library.h" //Source: http://librarymanager/All#SparkFun_BNO080
@@ -6,14 +9,15 @@
 #include <string>
 #include "display.h"
 
+// displayText: display text on the screen
 void displayText(std::string message, Adafruit_SSD1306 &display) {
-  display.clearDisplay();
+  display.clearDisplay();       // Start with a clear display
   display.setTextSize(1);       // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);  // Draw white text
   display.setCursor(0, 0);      // Start at top-left corner
 
 
-  // Display the text
+  // queue text for displaying
   display.println(message.c_str());
 
 
@@ -22,9 +26,9 @@ void displayText(std::string message, Adafruit_SSD1306 &display) {
   display.clearDisplay();
 }
 
-// Display a given set of roll, pitch, and yaw values on screen
+// displayAngles: display a given set of roll, pitch, and yaw values on screen
 void displayAngles(double roll, double pitch, double yaw, Adafruit_SSD1306 &display) {
-  display.clearDisplay();
+  display.clearDisplay();       // Start with a clear display
   display.setTextSize(1);       // Normal 1:1 pixel scale
   display.setTextColor(SSD1306_WHITE);  // Draw white text
   display.setCursor(0, 0);      // Start at top-left corner
